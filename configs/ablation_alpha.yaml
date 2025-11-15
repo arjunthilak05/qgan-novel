@@ -1,0 +1,74 @@
+# ========================================
+# Ablation Study: Alpha Values
+# Test different entropy regularization strengths
+# ========================================
+
+experiment:
+  name: "ablation_alpha"
+  description: "Test alpha in [0.0, 0.01, 0.05, 0.1, 0.5, 1.0]"
+  seed: 42
+  device: "cuda:0"
+
+# Alpha values to test (will run sequentially on single GPU)
+ablation:
+  parameter: "alpha"
+  values: [0.0, 0.01, 0.05, 0.1, 0.5, 1.0]
+
+# Base configuration (inherited by all runs)
+base_config:
+  model:
+    generator:
+      type: "quantum"
+      n_qubits: 8
+      circuit_depth: 3
+      ansatz: "hardware_efficient"
+      simulator: "lightning.gpu"
+      shots: null
+
+    discriminator:
+      type: "mlp"
+      hidden_dims: [64, 32, 16]
+      activation: "leaky_relu"
+      leaky_slope: 0.2
+      dropout: 0.2
+      output_activation: "sigmoid"
+
+  loss:
+    type: "entropy_regularized"
+    entropy:
+      type: "von_neumann"
+      partition_size: 2
+
+  training:
+    n_epochs: 500  # Shorter for ablation
+    batch_size: 2048
+    optimizer:
+      generator:
+        type: "adam"
+        lr: 0.01
+      discriminator:
+        type: "adam"
+        lr: 0.001
+    d_updates_per_g: 5
+    save_every: 100
+    eval_every: 10
+
+  data:
+    name: "8gaussian"
+    train_size: 10000
+    test_size: 1000
+    noise_dim: 4
+
+  evaluation:
+    metrics:
+      - "mode_coverage"
+      - "diversity_score"
+      - "kl_divergence"
+      - "entanglement_entropy"
+    n_samples: 5000
+
+  logging:
+    use_wandb: true
+    wandb_project: "entropy-qgan-ablation"
+    use_tensorboard: false
+    save_dir: "results/logs/ablation_alpha"

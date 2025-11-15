@@ -1,0 +1,109 @@
+# ========================================
+# Entropy-Regularized QGAN Configuration
+# YOUR NOVEL METHOD
+# ========================================
+
+experiment:
+  name: "entropy_qgan"
+  description: "QGAN with entanglement entropy regularization"
+  seed: 42
+  device: "cuda:0"  # Single H200 GPU
+
+# Model Architecture
+model:
+  generator:
+    type: "quantum"
+    n_qubits: 8
+    circuit_depth: 3
+    ansatz: "hardware_efficient"
+    simulator: "lightning.gpu"
+    shots: null
+
+  discriminator:
+    type: "mlp"
+    hidden_dims: [64, 32, 16]
+    activation: "leaky_relu"
+    leaky_slope: 0.2
+    dropout: 0.2
+    output_activation: "sigmoid"
+
+# Loss Function - THE KEY INNOVATION
+loss:
+  type: "entropy_regularized"  # YOUR NOVEL LOSS
+  alpha: 0.1  # Entropy regularization strength
+
+  entropy:
+    type: "von_neumann"  # Options: von_neumann, renyi, mutual_info
+    partition_size: 2  # Number of qubits in subsystem A
+    renyi_alpha: 2.0  # Only for Rényi entropy
+
+  # Adaptive alpha scheduling
+  adaptive_alpha:
+    enabled: false
+    initial_alpha: 0.5
+    min_alpha: 0.01
+    decay_rate: 0.95
+    patience: 50
+
+# Training
+training:
+  n_epochs: 1000
+  batch_size: 2048
+
+  optimizer:
+    generator:
+      type: "adam"
+      lr: 0.01
+      betas: [0.9, 0.999]
+    discriminator:
+      type: "adam"
+      lr: 0.001
+      betas: [0.9, 0.999]
+
+  d_updates_per_g: 5
+  gradient_clip: 1.0
+
+  save_every: 100
+  eval_every: 10
+  log_every: 10
+
+# Dataset
+data:
+  name: "8gaussian"
+  train_size: 10000
+  test_size: 1000
+  noise_dim: 4
+
+  gaussian:
+    std: 0.1
+    radius: 2.0
+
+# Evaluation
+evaluation:
+  metrics:
+    - "mode_coverage"
+    - "diversity_score"
+    - "kl_divergence"
+    - "entanglement_entropy"  # Track entropy over training
+
+  mode_coverage:
+    threshold: 0.3
+
+  n_samples: 5000
+
+# Logging
+logging:
+  use_wandb: true
+  wandb_project: "entropy-qgan"
+  wandb_entity: null
+  use_tensorboard: true
+  save_dir: "results/logs"
+
+  # Log additional entropy metrics
+  log_entropy_histogram: true
+  log_state_visualization: true
+
+# Reproducibility
+reproducibility:
+  deterministic: true
+  benchmark: false

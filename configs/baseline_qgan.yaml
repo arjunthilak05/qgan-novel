@@ -1,0 +1,94 @@
+# ========================================
+# Baseline QGAN Configuration
+# Standard QGAN without entropy regularization
+# ========================================
+
+experiment:
+  name: "baseline_qgan"
+  description: "Standard QGAN for baseline comparison"
+  seed: 42
+  device: "cuda:0"  # Single H200 GPU
+
+# Model Architecture
+model:
+  generator:
+    type: "quantum"
+    n_qubits: 8
+    circuit_depth: 3
+    ansatz: "hardware_efficient"  # Options: hardware_efficient, strongly_entangling
+    simulator: "lightning.gpu"  # GPU-accelerated simulator
+    shots: null  # null for state vector simulation
+
+  discriminator:
+    type: "mlp"
+    hidden_dims: [64, 32, 16]
+    activation: "leaky_relu"
+    leaky_slope: 0.2
+    dropout: 0.2
+    output_activation: "sigmoid"
+
+# Loss Function
+loss:
+  type: "vanilla_gan"  # Standard GAN loss
+  alpha: 0.0  # NO entropy regularization for baseline
+
+# Training
+training:
+  n_epochs: 1000
+  batch_size: 2048  # Large batch for H200
+
+  optimizer:
+    generator:
+      type: "adam"
+      lr: 0.01
+      betas: [0.9, 0.999]
+    discriminator:
+      type: "adam"
+      lr: 0.001
+      betas: [0.9, 0.999]
+
+  # Training schedule
+  d_updates_per_g: 5  # Train discriminator 5x more
+  gradient_clip: 1.0
+
+  # Checkpointing
+  save_every: 100
+  eval_every: 10
+  log_every: 10
+
+# Dataset
+data:
+  name: "8gaussian"  # Options: 8gaussian, 25gaussian, mnist, fashion_mnist
+  train_size: 10000
+  test_size: 1000
+  noise_dim: 4  # Input noise dimension for generator
+
+  # 8-Gaussian specific
+  gaussian:
+    std: 0.1
+    radius: 2.0
+
+# Evaluation
+evaluation:
+  metrics:
+    - "mode_coverage"
+    - "diversity_score"
+    - "kl_divergence"
+
+  mode_coverage:
+    threshold: 0.3  # Distance threshold for mode detection
+
+  n_samples: 5000  # Number of samples for evaluation
+
+# Logging
+logging:
+  use_wandb: true
+  wandb_project: "entropy-qgan"
+  wandb_entity: null  # Set your wandb username
+  use_tensorboard: true
+  save_dir: "results/logs"
+
+# Reproducibility
+reproducibility:
+  deterministic: true
+  benchmark: false
